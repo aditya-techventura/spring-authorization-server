@@ -1,5 +1,12 @@
 server:
-  port: 9000
+  ssl:
+    enabled: true
+    key-store: classpath:spring-authorization-server.p12
+    key-store-password: secret
+    key-store-type: pkcs12
+    key-alias: spring-authorization-server
+    key-password: secret
+  port: 9443
 
 logging:
   level:
