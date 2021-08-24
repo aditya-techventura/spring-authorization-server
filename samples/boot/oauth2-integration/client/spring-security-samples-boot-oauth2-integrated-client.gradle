@@ -7,6 +7,7 @@ dependencies {
 	compile 'org.springframework.boot:spring-boot-starter-oauth2-client'
 	compile 'org.springframework:spring-webflux'
 	compile 'io.projectreactor.netty:reactor-netty'
+	compile 'org.apache.httpcomponents:httpclient'
 	compile 'org.thymeleaf.extras:thymeleaf-extras-springsecurity5'
 	compile 'org.webjars:webjars-locator-core'
 	compile 'org.webjars:bootstrap:3.4.1'

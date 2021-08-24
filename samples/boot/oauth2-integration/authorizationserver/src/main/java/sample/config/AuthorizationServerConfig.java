@@ -21,8 +21,11 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import sample.authentication.X509ClientCertificateAuthenticationProvider;
 import sample.jose.Jwks;
+import sample.web.authentication.X509ClientCertificateAuthenticationConverter;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -33,7 +36,7 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
+import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
@@ -47,42 +50,54 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.config.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.config.ProviderSettings;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
  * @author Joe Grandja
- * @since 0.0.1
  */
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
 
+	@Autowired
+	private RegisteredClientRepository registeredClientRepository;
+
+	// @formatter:off
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
-		/*
-		 * -----------------
-		 * Default Endpoints
-		 * -----------------
-		 *
-		 * Authorization Endpoint			/oauth2/authorize
-		 * Token Endpoint					/oauth2/token
-		 * Token Revocation					/oauth2/revoke
-		 * Token Introspection				/oauth2/introspect
-		 * JWK Set Endpoint					/oauth2/jwks
-		 * Authorization Server Metadata	/.well-known/oauth-authorization-server
-		 * OIDC	Provider Configuration		/.well-known/openid-configuration
-		 */
-		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+		OAuth2AuthorizationServerConfigurer<HttpSecurity> authorizationServerConfigurer =
+				new OAuth2AuthorizationServerConfigurer<>();
 
-		return http.formLogin(Customizer.withDefaults()).build();
+		authorizationServerConfigurer
+			.clientAuthentication(clientAuthentication ->
+				clientAuthentication
+					.authenticationConverter(
+							new X509ClientCertificateAuthenticationConverter())
+					.authenticationProvider(
+							new X509ClientCertificateAuthenticationProvider(
+									this.registeredClientRepository)));
+
+		RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
+
+		http
+			.requestMatcher(endpointsMatcher)
+			.authorizeRequests(authorizeRequests ->
+				authorizeRequests.anyRequest().authenticated()
+			)
+			.formLogin(Customizer.withDefaults())
+			.csrf(csrf -> csrf.ignoringRequestMatchers(endpointsMatcher))
+			.apply(authorizationServerConfigurer);
+
+		return http.build();
 	}
+	// @formatter:on
 
 	// @formatter:off
 	@Bean
 	public RegisteredClientRepository registeredClientRepository(JdbcTemplate jdbcTemplate) {
 		RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
 				.clientId("messaging-client")
-				.clientSecret("secret")
-				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+				.clientAuthenticationMethod(new ClientAuthenticationMethod("tls_client_auth"))
 				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
 				.authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
 				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
@@ -91,7 +106,11 @@ public class AuthorizationServerConfig {
 				.scope(OidcScopes.OPENID)
 				.scope("message.read")
 				.scope("message.write")
-				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
+				.clientSettings(ClientSettings.builder()
+						.requireAuthorizationConsent(true)
+						.setting("settings.client.x509-certificate-subjectDN", "CN=spring-client, OU=Spring, O=VMware, C=US")
+						.build()
+				)
 				.build();
 
 		// Save registered client in db as if in-memory

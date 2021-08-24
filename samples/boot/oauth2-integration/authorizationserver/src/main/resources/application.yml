@@ -6,6 +6,10 @@ server:
     key-store-type: pkcs12
     key-alias: spring-authorization-server
     key-password: secret
+    client-auth: need
+    trust-store: classpath:spring-authorization-server.p12
+    trust-store-password: secret
+    trust-store-type: pkcs12
   port: 9443
 
 logging:
