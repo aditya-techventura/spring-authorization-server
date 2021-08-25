@@ -1,0 +1,75 @@
+= Setup PKI
+
+== Setup Root Certificate
+
+* Generate Keypair
+** Run -> `keytool -genkeypair -alias spring-root-ca -keyalg RSA -keystore ./pki/spring-root-ca.p12 -keypass secret -storepass secret -storetype pkcs12 -validity 365 -dname "CN=spring-root, OU=Spring, O=VMware, C=US" -ext bc=ca:true`
+
+* Export Self Signed Root CA (Certificate Authority)
+** Run -> `keytool -exportcert -alias spring-root-ca -keystore ./pki/spring-root-ca.p12 -storepass secret -storetype pkcs12 -file ./pki/spring-root-ca.cer`
+
+* Display Root Certificate
+** Run -> `keytool -list -v -alias spring-root-ca -keystore ./pki/spring-root-ca.p12 -storepass secret -storetype pkcs12`
+
+== Setup authorizationserver Certificate
+
+* Generate Keypair
+** Run -> `keytool -genkeypair -alias spring-authorization-server -keyalg RSA -keystore ./authorizationserver/src/main/resources/spring-authorization-server.p12 -keypass secret -storepass secret -storetype pkcs12 -validity 365 -dname "CN=spring-authorization-server, OU=Spring, O=VMware, C=US" -ext san=dns:auth-server`
+
+* Generate Certificate Signing Request (CSR)
+** Run -> `keytool -certreq -alias spring-authorization-server -file ./authorizationserver/src/main/resources/spring-authorization-server.csr -keystore ./authorizationserver/src/main/resources/spring-authorization-server.p12 -keypass secret -storepass secret -storetype pkcs12`
+
+* Generate Certificate from CSR
+** Run -> `keytool -gencert -infile ./authorizationserver/src/main/resources/spring-authorization-server.csr -outfile ./authorizationserver/src/main/resources/spring-authorization-server.cer -alias spring-root-ca -keystore ./pki/spring-root-ca.p12 -keypass secret -storepass secret -storetype pkcs12 -validity 365`
+
+* Import Root Certificate
+** Run -> `keytool -importcert -file ./pki/spring-root-ca.cer -alias spring-root-ca -keystore ./authorizationserver/src/main/resources/spring-authorization-server.p12 -keypass secret -storepass secret -storetype pkcs12`
+
+* Import VMware Root Certificate (browser client certificate is issued by VMware Root)
+** Run -> `keytool -importcert -file ./pki/vmware-root-ca.cer -alias vmware-root-ca -keystore ./authorizationserver/src/main/resources/spring-authorization-server.p12 -keypass secret -storepass secret -storetype pkcs12`
+
+* Import Certificate
+** Run -> `keytool -importcert -file ./authorizationserver/src/main/resources/spring-authorization-server.cer -alias spring-authorization-server -keystore ./authorizationserver/src/main/resources/spring-authorization-server.p12 -keypass secret -storepass secret -storetype pkcs12`
+
+* Display Certificate
+** Run -> `keytool -list -v -alias spring-authorization-server -keystore ./authorizationserver/src/main/resources/spring-authorization-server.p12 -storepass secret -storetype pkcs12`
+
+== Setup client Certificate
+
+* Generate Keypair
+** Run -> `keytool -genkeypair -alias spring-client -keyalg RSA -keystore ./client/src/main/resources/spring-client.p12 -keypass secret -storepass secret -storetype pkcs12 -validity 365 -dname "CN=spring-client, OU=Spring, O=VMware, C=US"`
+
+* Generate Certificate Signing Request (CSR)
+** Run -> `keytool -certreq -alias spring-client -file ./client/src/main/resources/spring-client.csr -keystore ./client/src/main/resources/spring-client.p12 -keypass secret -storepass secret -storetype pkcs12`
+
+* Generate Certificate from CSR
+** Run -> `keytool -gencert -infile ./client/src/main/resources/spring-client.csr -outfile ./client/src/main/resources/spring-client.cer -alias spring-root-ca -keystore ./pki/spring-root-ca.p12 -keypass secret -storepass secret -storetype pkcs12 -validity 365`
+
+* Import Root Certificate
+** Run -> `keytool -importcert -file ./pki/spring-root-ca.cer -alias spring-root-ca -keystore ./client/src/main/resources/spring-client.p12 -keypass secret -storepass secret -storetype pkcs12`
+
+* Import Certificate
+** Run -> `keytool -importcert -file ./client/src/main/resources/spring-client.cer -alias spring-client -keystore ./client/src/main/resources/spring-client.p12 -keypass secret -storepass secret -storetype pkcs12`
+
+* Display Certificate
+** Run -> `keytool -list -v -alias spring-client -keystore ./client/src/main/resources/spring-client.p12 -storepass secret -storetype pkcs12`
+
+== Setup resourceserver Certificate
+
+* Generate Keypair
+** Run -> `keytool -genkeypair -alias spring-resource-server -keyalg RSA -keystore ./resourceserver/src/main/resources/spring-resource-server.p12 -keypass secret -storepass secret -storetype pkcs12 -validity 365 -dname "CN=spring-resource-server, OU=Spring, O=VMware, C=US"`
+
+* Generate Certificate Signing Request (CSR)
+** Run -> `keytool -certreq -alias spring-resource-server -file ./resourceserver/src/main/resources/spring-resource-server.csr -keystore ./resourceserver/src/main/resources/spring-resource-server.p12 -keypass secret -storepass secret -storetype pkcs12`
+
+* Generate Certificate from CSR
+** Run -> `keytool -gencert -infile ./resourceserver/src/main/resources/spring-resource-server.csr -outfile ./resourceserver/src/main/resources/spring-resource-server.cer -alias spring-root-ca -keystore ./pki/spring-root-ca.p12 -keypass secret -storepass secret -storetype pkcs12 -validity 365`
+
+* Import Root Certificate
+** Run -> `keytool -importcert -file ./pki/spring-root-ca.cer -alias spring-root-ca -keystore ./resourceserver/src/main/resources/spring-resource-server.p12 -keypass secret -storepass secret -storetype pkcs12`
+
+* Import Certificate
+** Run -> `keytool -importcert -file ./resourceserver/src/main/resources/spring-resource-server.cer -alias spring-resource-server -keystore ./resourceserver/src/main/resources/spring-resource-server.p12 -keypass secret -storepass secret -storetype pkcs12`
+
+* Display Certificate
+** Run -> `keytool -list -v -alias spring-resource-server -keystore ./resourceserver/src/main/resources/spring-resource-server.p12 -storepass secret -storetype pkcs12`
