@@ -1,5 +1,16 @@
 server:
-  port: 8090
+  ssl:
+    enabled: true
+    key-store: classpath:spring-resource-server.p12
+    key-store-password: secret
+    key-store-type: pkcs12
+    key-alias: spring-resource-server
+    key-password: secret
+    client-auth: need
+    trust-store: classpath:spring-resource-server.p12
+    trust-store-password: secret
+    trust-store-type: pkcs12
+  port: 8443
 
 logging:
   level:
@@ -14,4 +25,4 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://auth-server:9000
+          jwk-set-uri:  https://auth-server:9443/oauth2/jwks

@@ -46,4 +46,4 @@ spring:
             jwk-set-uri:  https://auth-server:9443/oauth2/jwks
 
 messages:
-  base-uri: http://127.0.0.1:8090/messages
+  base-uri: https://127.0.0.1:8443/messages

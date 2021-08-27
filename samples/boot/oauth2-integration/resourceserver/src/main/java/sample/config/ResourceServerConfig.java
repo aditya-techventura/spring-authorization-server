@@ -15,14 +15,18 @@
  */
 package sample.config;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.client.RestTemplate;
 
 /**
  * @author Joe Grandja
- * @since 0.0.1
  */
 @EnableWebSecurity
 public class ResourceServerConfig {
@@ -40,5 +44,18 @@ public class ResourceServerConfig {
 		return http.build();
 	}
 	// @formatter:on
+
+	@Bean
+	JwtDecoder jwtDecoder(@Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri,
+			RestTemplateBuilder builder) throws Exception {
+
+		RestTemplate restTemplate = builder
+				.requestFactory(RestTemplateUtils.createClientHttpRequestFactory())
+				.build();
+
+		return NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
+				.restOperations(restTemplate)
+				.build();
+	}
 
 }
