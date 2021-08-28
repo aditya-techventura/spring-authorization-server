@@ -15,6 +15,9 @@
  */
 package sample.config;
 
+import java.security.MessageDigest;
+import java.security.cert.X509Certificate;
+import java.util.Base64;
 import java.util.UUID;
 
 import com.nimbusds.jose.jwk.JWKSet;
@@ -39,11 +42,15 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.core.OAuth2TokenType;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenCustomizer;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -144,6 +151,21 @@ public class AuthorizationServerConfig {
 	}
 
 	@Bean
+	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
+		return context -> {
+			if (OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
+				OAuth2ClientAuthenticationToken clientAuthentication =
+						(OAuth2ClientAuthenticationToken) context.getAuthorizationGrant().getPrincipal();
+				X509Certificate x509Certificate = (X509Certificate) clientAuthentication.getCredentials();
+				String sha256Thumbprint = computeThumbprint(x509Certificate);
+				if (sha256Thumbprint != null) {
+					context.getClaims().claim("x5client#S256", sha256Thumbprint);
+				}
+			}
+		};
+	}
+
+	@Bean
 	public EmbeddedDatabase embeddedDatabase() {
 		// @formatter:off
 		return new EmbeddedDatabaseBuilder()
@@ -155,6 +177,16 @@ public class AuthorizationServerConfig {
 				.addScript("org/springframework/security/oauth2/server/authorization/client/oauth2-registered-client-schema.sql")
 				.build();
 		// @formatter:on
+	}
+
+	private static String computeThumbprint(X509Certificate x509Certificate) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			byte[] digest = md.digest(x509Certificate.getEncoded());
+			return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+		} catch (Exception ex) {
+			return null;
+		}
 	}
 
 }
