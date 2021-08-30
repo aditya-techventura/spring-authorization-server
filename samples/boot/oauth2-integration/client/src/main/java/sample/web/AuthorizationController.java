@@ -15,18 +15,25 @@
  */
 package sample.web;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
 import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.reactive.function.client.WebClient;
-
-import javax.servlet.http.HttpServletRequest;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.servlet.ModelAndView;
 
 import static org.springframework.security.oauth2.client.web.reactive.function.client.ServletOAuth2AuthorizedClientExchangeFilterFunction.clientRegistrationId;
 import static org.springframework.security.oauth2.client.web.reactive.function.client.ServletOAuth2AuthorizedClientExchangeFilterFunction.oauth2AuthorizedClient;
@@ -37,12 +44,16 @@ import static org.springframework.security.oauth2.client.web.reactive.function.c
  */
 @Controller
 public class AuthorizationController {
-	private final WebClient webClient;
+	private final WebClient springClient;
+	private final WebClient tokenReplayClient;
 	private final String messagesBaseUri;
 
-	public AuthorizationController(WebClient webClient,
+	public AuthorizationController(
+			WebClient springClient,
+			WebClient tokenReplayClient,
 			@Value("${messages.base-uri}") String messagesBaseUri) {
-		this.webClient = webClient;
+		this.springClient = springClient;
+		this.tokenReplayClient = tokenReplayClient;
 		this.messagesBaseUri = messagesBaseUri;
 	}
 
@@ -51,7 +62,7 @@ public class AuthorizationController {
 			@RegisteredOAuth2AuthorizedClient("messaging-client-authorization-code")
 					OAuth2AuthorizedClient authorizedClient) {
 
-		String[] messages = this.webClient
+		String[] messages = this.springClient
 				.get()
 				.uri(this.messagesBaseUri)
 				.attributes(oauth2AuthorizedClient(authorizedClient))
@@ -82,7 +93,7 @@ public class AuthorizationController {
 	@GetMapping(value = "/authorize", params = "grant_type=client_credentials")
 	public String clientCredentialsGrant(Model model) {
 
-		String[] messages = this.webClient
+		String[] messages = this.springClient
 				.get()
 				.uri(this.messagesBaseUri)
 				.attributes(clientRegistrationId("messaging-client-client-credentials"))
@@ -93,4 +104,35 @@ public class AuthorizationController {
 
 		return "index";
 	}
+
+	@GetMapping(value = "/replay-token")
+	public String replayToken(Model model,
+			@RegisteredOAuth2AuthorizedClient("messaging-client-client-credentials")
+					OAuth2AuthorizedClient authorizedClient) {
+
+		String[] messages = this.tokenReplayClient
+				.get()
+				.uri(this.messagesBaseUri)
+				.headers((headers) -> headers.setBearerAuth(authorizedClient.getAccessToken().getTokenValue()))
+				.retrieve()
+				.bodyToMono(String[].class)
+				.block();
+		model.addAttribute("messages", messages);
+
+		return "index";
+	}
+
+	@ExceptionHandler(WebClientResponseException.class)
+	ModelAndView handleException(WebClientResponseException ex) {
+		return errorView("An error occurred on the WebClient response -> [Status: " +
+				ex.getStatusCode() + "] " + ex.getStatusText());
+	}
+
+	private ModelAndView errorView(String errorMessage) {
+		OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.INVALID_CLIENT, errorMessage, null);
+		Map<String, Object> model = new HashMap<>();
+		model.put("error", error);
+		return new ModelAndView("index", model);
+	}
+
 }

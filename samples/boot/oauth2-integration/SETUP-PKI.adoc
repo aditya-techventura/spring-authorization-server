@@ -73,3 +73,14 @@
 
 * Display Certificate
 ** Run -> `keytool -list -v -alias spring-resource-server -keystore ./resourceserver/src/main/resources/spring-resource-server.p12 -storepass secret -storetype pkcs12`
+
+== Setup token-replay-client Certificate
+
+* Generate Keypair
+** Run -> `keytool -genkeypair -alias token-replay-client -keyalg RSA -keystore ./client/src/main/resources/token-replay-client.p12 -keypass secret -storepass secret -storetype pkcs12 -validity 365 -dname "CN=token-replay-client"`
+
+* Export Certificate
+** Run -> `keytool -exportcert -alias token-replay-client -file ./client/src/main/resources/token-replay-client.cer -keystore ./client/src/main/resources/token-replay-client.p12 -storepass secret -storetype pkcs12`
+
+* Import Certificate
+** Run -> `keytool -importcert -file ./client/src/main/resources/token-replay-client.cer -alias token-replay-client -keystore ./resourceserver/src/main/resources/spring-resource-server.p12 -keypass secret -storepass secret -storetype pkcs12`

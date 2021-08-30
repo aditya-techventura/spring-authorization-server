@@ -50,12 +50,17 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class WebClientConfig {
 
 	@Bean
-	WebClient webClient(OAuth2AuthorizedClientManager authorizedClientManager) throws Exception {
+	WebClient springClient(OAuth2AuthorizedClientManager authorizedClientManager) throws Exception {
 		ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client =
 				new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
-		return WebClientUtils.createWebClient()
+		return WebClientUtils.createSpringClient()
 				.apply(oauth2Client.oauth2Configuration())
 				.build();
+	}
+
+	@Bean
+	WebClient tokenReplayClient() throws Exception {
+		return WebClientUtils.createTokenReplayClient().build();
 	}
 
 	@Bean

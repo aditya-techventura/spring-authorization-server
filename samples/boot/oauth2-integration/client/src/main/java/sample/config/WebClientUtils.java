@@ -38,14 +38,18 @@ import org.springframework.web.reactive.function.client.WebClient;
  * @author Joe Grandja
  */
 class WebClientUtils {
-	private static final String KEYSTORE_PATH = "classpath:spring-client.p12";
-	private static final String KEYSTORE_PASSWORD = "secret";
-	private static final String KEY_ALIAS = "spring-client";
-	private static final String KEY_PASSWORD = "secret";
 
-	static WebClient.Builder createWebClient() throws Exception {
+	static WebClient.Builder createSpringClient() throws Exception {
+		return createWebClient("classpath:spring-client.p12", "secret", "spring-client", "secret");
+	}
+
+	static WebClient.Builder createTokenReplayClient() throws Exception {
+		return createWebClient("classpath:token-replay-client.p12", "secret", "token-replay-client", "secret");
+	}
+
+	private static WebClient.Builder createWebClient(String keyStorePath, String keyStorePassword, String keyAlias, String keyPassword) throws Exception {
 		KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-		keyStore.load(new FileInputStream(ResourceUtils.getFile(KEYSTORE_PATH)), KEYSTORE_PASSWORD.toCharArray());
+		keyStore.load(new FileInputStream(ResourceUtils.getFile(keyStorePath)), keyStorePassword.toCharArray());
 
 		List<Certificate> trustedCertificateList = new ArrayList<>();
 		for (String alias : Collections.list(keyStore.aliases())) {
@@ -57,16 +61,17 @@ class WebClientUtils {
 		X509Certificate[] trustedCertificates = trustedCertificateList.toArray(
 				new X509Certificate[trustedCertificateList.size()]);
 
-		PrivateKey clientPrivateKey = (PrivateKey) keyStore.getKey(KEY_ALIAS, KEY_PASSWORD.toCharArray());
-		Certificate[] clientCertificateChain = keyStore.getCertificateChain(KEY_ALIAS);
+		PrivateKey clientPrivateKey = (PrivateKey) keyStore.getKey(keyAlias, keyPassword.toCharArray());
+		Certificate[] clientCertificateChain = keyStore.getCertificateChain(keyAlias);
 		X509Certificate[] x509ClientCertificateChain = Arrays.asList(clientCertificateChain).toArray(
 				new X509Certificate[clientCertificateChain.length]);
 
 		SslContext sslContext = SslContextBuilder.forClient()
-				.keyManager(clientPrivateKey, KEY_PASSWORD, x509ClientCertificateChain)
+				.keyManager(clientPrivateKey, keyPassword, x509ClientCertificateChain)
 				// FIXME
-//				.trustManager(trustedCertificates)
+				// Add subject alternative name for resource server host to resource server certificate
 				.trustManager(InsecureTrustManagerFactory.INSTANCE)
+//				.trustManager(trustedCertificates)
 				.build();
 
 		HttpClient httpClient = HttpClient.create()
