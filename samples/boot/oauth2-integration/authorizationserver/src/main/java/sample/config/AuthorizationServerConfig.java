@@ -58,7 +58,21 @@ public class AuthorizationServerConfig {
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+		/*
+		 * -----------------
+		 * Default Endpoints
+		 * -----------------
+		 *
+		 * Authorization Endpoint			/oauth2/authorize
+		 * Token Endpoint					/oauth2/token
+		 * Token Revocation					/oauth2/revoke
+		 * Token Introspection				/oauth2/introspect
+		 * JWK Set Endpoint					/oauth2/jwks
+		 * Authorization Server Metadata	/.well-known/oauth-authorization-server
+		 * OIDC	Provider Configuration		/.well-known/openid-configuration
+		 */
 		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
+
 		return http.formLogin(Customizer.withDefaults()).build();
 	}
 
