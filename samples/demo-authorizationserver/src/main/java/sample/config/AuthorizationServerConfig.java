@@ -15,6 +15,9 @@
  */
 package sample.config;
 
+import java.security.MessageDigest;
+import java.security.cert.X509Certificate;
+import java.util.Base64;
 import java.util.UUID;
 
 import com.nimbusds.jose.jwk.JWKSet;
@@ -22,9 +25,11 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import sample.authentication.DeviceClientAuthenticationProvider;
+import sample.authentication.X509ClientCertificateAuthenticationProvider;
 import sample.federation.FederatedIdentityIdTokenCustomizer;
 import sample.jose.Jwks;
 import sample.web.authentication.DeviceClientAuthenticationConverter;
+import sample.web.authentication.X509ClientCertificateAuthenticationConverter;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,6 +48,8 @@ import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -107,7 +114,9 @@ public class AuthorizationServerConfig {
 			.clientAuthentication(clientAuthentication ->
 				clientAuthentication
 					.authenticationConverter(deviceClientAuthenticationConverter)
+					.authenticationConverter(new X509ClientCertificateAuthenticationConverter())
 					.authenticationProvider(deviceClientAuthenticationProvider)
+					.authenticationProvider(new X509ClientCertificateAuthenticationProvider(registeredClientRepository))
 			)
 			.authorizationEndpoint(authorizationEndpoint ->
 				authorizationEndpoint.consentPage(CUSTOM_CONSENT_PAGE_URI))
@@ -125,6 +134,7 @@ public class AuthorizationServerConfig {
 			.oauth2ResourceServer(oauth2ResourceServer ->
 				oauth2ResourceServer.jwt(Customizer.withDefaults()));
 		// @formatter:on
+
 		return http.build();
 	}
 
@@ -133,8 +143,7 @@ public class AuthorizationServerConfig {
 	public JdbcRegisteredClientRepository registeredClientRepository(JdbcTemplate jdbcTemplate) {
 		RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
 				.clientId("messaging-client")
-				.clientSecret("{noop}secret")
-				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+				.clientAuthenticationMethod(new ClientAuthenticationMethod("tls_client_auth"))
 				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
 				.authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
 				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
@@ -146,7 +155,11 @@ public class AuthorizationServerConfig {
 				.scope("message.read")
 				.scope("message.write")
 				.scope("user.read")
-				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
+				.clientSettings(ClientSettings.builder()
+						.requireAuthorizationConsent(true)
+						.setting("settings.client.x500Principal", "CN=demo-client-sample,OU=Spring Samples,O=Spring,C=US")
+						.build()
+				)
 				.build();
 
 		RegisteredClient deviceClient = RegisteredClient.withId(UUID.randomUUID().toString())
@@ -190,15 +203,32 @@ public class AuthorizationServerConfig {
 	}
 
 	@Bean
-	public OAuth2TokenCustomizer<JwtEncodingContext> idTokenCustomizer() {
-		return new FederatedIdentityIdTokenCustomizer();
-	}
-
-	@Bean
 	public JWKSource<SecurityContext> jwkSource() {
 		RSAKey rsaKey = Jwks.generateRsa();
 		JWKSet jwkSet = new JWKSet(rsaKey);
 		return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
+	}
+
+	@Bean
+	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
+		final OAuth2TokenCustomizer<JwtEncodingContext> federatedIdentityIdTokenCustomizer = new FederatedIdentityIdTokenCustomizer();
+		final OAuth2TokenCustomizer<JwtEncodingContext> x509CertificateBoundTokenCustomizer = (context) -> {
+			if (OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
+				OAuth2ClientAuthenticationToken clientAuthentication =
+						(OAuth2ClientAuthenticationToken) context.getAuthorizationGrant().getPrincipal();
+				X509Certificate x509Certificate = (X509Certificate) clientAuthentication.getCredentials();
+				if (x509Certificate != null) {
+					String sha256Thumbprint = computeThumbprint(x509Certificate);
+					if (sha256Thumbprint != null) {
+						context.getClaims().claim("x5tc#S256", sha256Thumbprint);
+					}
+				}
+			}
+		};
+		return (context) -> {
+			federatedIdentityIdTokenCustomizer.customize(context);
+			x509CertificateBoundTokenCustomizer.customize(context);
+		};
 	}
 
 	@Bean
@@ -223,6 +253,16 @@ public class AuthorizationServerConfig {
 				.addScript("org/springframework/security/oauth2/server/authorization/client/oauth2-registered-client-schema.sql")
 				.build();
 		// @formatter:on
+	}
+
+	private static String computeThumbprint(X509Certificate x509Certificate) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			byte[] digest = md.digest(x509Certificate.getEncoded());
+			return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+		} catch (Exception ex) {
+			return null;
+		}
 	}
 
 }

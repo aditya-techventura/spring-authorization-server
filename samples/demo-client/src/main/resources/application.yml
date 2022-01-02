@@ -9,6 +9,21 @@ logging:
     org.springframework.security.oauth2: INFO
 
 spring:
+  ssl:
+    bundle:
+      jks:
+        demo-client:
+          key:
+            alias: demo-client-sample
+            password: password
+          keystore:
+            location: classpath:keystore.p12
+            password: password
+            type: PKCS12
+          truststore:
+            location: classpath:keystore.p12
+            password: password
+            type: PKCS12
   thymeleaf:
     cache: false
   security:
@@ -18,7 +33,7 @@ spring:
           messaging-client-oidc:
             provider: spring
             client-id: messaging-client
-            client-secret: secret
+            client-authentication-method: tls_client_auth
             authorization-grant-type: authorization_code
             redirect-uri: "http://127.0.0.1:8080/login/oauth2/code/{registrationId}"
             scope: openid, profile
@@ -26,7 +41,7 @@ spring:
           messaging-client-authorization-code:
             provider: spring
             client-id: messaging-client
-            client-secret: secret
+            client-authentication-method: tls_client_auth
             authorization-grant-type: authorization_code
             redirect-uri: "http://127.0.0.1:8080/authorized"
             scope: message.read,message.write
@@ -34,7 +49,7 @@ spring:
           messaging-client-client-credentials:
             provider: spring
             client-id: messaging-client
-            client-secret: secret
+            client-authentication-method: tls_client_auth
             authorization-grant-type: client_credentials
             scope: message.read,message.write
             client-name: messaging-client-client-credentials
@@ -55,10 +70,14 @@ spring:
             client-name: messaging-client-device-code
         provider:
           spring:
-            issuer-uri: http://localhost:9000
+            authorization-uri: https://localhost:9443/oauth2/authorize
+            token-uri: https://localhost:9443/oauth2/token
+            jwk-set-uri: https://localhost:9443/oauth2/jwks
+            user-info-uri: https://localhost:9443/userinfo
+            user-name-attribute: sub
 
 messages:
-  base-uri: http://127.0.0.1:8090/messages
+  base-uri: https://127.0.0.1:8443/messages
 
 user-messages:
   base-uri: http://127.0.0.1:8091/user/messages

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 the original author or authors.
+ * Copyright 2020-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,28 @@
  */
 package sample.config;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
+
+import sample.authentication.X509ClientCertificateClaimValidator;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.client.RestTemplate;
 
 /**
  * @author Joe Grandja
@@ -34,13 +51,34 @@ public class ResourceServerConfig {
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
 			.securityMatcher("/messages/**")
-				.authorizeHttpRequests()
-					.requestMatchers("/messages/**").hasAuthority("SCOPE_message.read")
-					.and()
-			.oauth2ResourceServer()
-				.jwt();
+				.authorizeHttpRequests(authorize ->
+						authorize.requestMatchers("/messages/**").hasAuthority("SCOPE_message.read")
+				)
+				.oauth2ResourceServer(oauth2ResourceServer ->
+						oauth2ResourceServer.jwt(Customizer.withDefaults())
+				);
 		return http.build();
 	}
 	// @formatter:on
+
+	@Bean
+	JwtDecoder jwtDecoder(@Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri,
+			RestTemplateBuilder builder, Supplier<ClientHttpRequestFactory> clientHttpRequestFactory) {
+
+		RestTemplate restTemplate = builder
+				.requestFactory(clientHttpRequestFactory)
+				.build();
+
+		NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
+				.restOperations(restTemplate)
+				.build();
+
+		List<OAuth2TokenValidator<Jwt>> validators = new ArrayList<>();
+		validators.add(new JwtTimestampValidator());
+		validators.add(new X509ClientCertificateClaimValidator());
+		jwtDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(validators));
+
+		return jwtDecoder;
+	}
 
 }
