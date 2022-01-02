@@ -17,7 +17,14 @@ repositories {
 }
 
 dependencies {
-	implementation "org.springframework.boot:spring-boot-starter-web"
+	implementation("org.springframework.boot:spring-boot-starter-web") {
+		exclude module: "spring-boot-starter-tomcat"
+	}
+	implementation "org.springframework.boot:spring-boot-starter-jetty"
 	implementation "org.springframework.boot:spring-boot-starter-security"
 	implementation "org.springframework.boot:spring-boot-starter-oauth2-resource-server"
+	implementation "org.apache.httpcomponents.client5:httpclient5"
+	implementation "io.spiffe:java-spiffe-provider:0.8.1"
+
+	runtimeOnly "io.spiffe:grpc-netty-macos:0.8.1"
 }

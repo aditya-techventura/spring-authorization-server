@@ -1,5 +1,9 @@
 server:
-  port: 9000
+  port: 9443
+
+logging:
+  level:
+    org.springframework.security: trace
 
 spring:
   security:
@@ -24,9 +28,7 @@ spring:
           github:
             user-name-attribute: login
 
-logging:
-  level:
-    root: INFO
-    org.springframework.web: INFO
-    org.springframework.security: INFO
-    org.springframework.security.oauth2: INFO
+spiffe:
+  workload:
+    id: "spiffe://example.org/messages/authorization-server"
+    accepted-ids: "spiffe://example.org/messages/client, spiffe://example.org/messages/resource-server"

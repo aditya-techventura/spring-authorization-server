@@ -15,17 +15,40 @@
  */
 package sample.config;
 
+import java.util.Arrays;
+import java.util.function.Supplier;
+
+import io.netty.handler.ssl.SslContext;
+import reactor.netty.http.client.HttpClient;
 import sample.authorization.DeviceCodeOAuth2AuthorizedClientProvider;
 
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.reactive.ClientHttpConnector;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.http.converter.FormHttpMessageConverter;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProvider;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProviderBuilder;
+import org.springframework.security.oauth2.client.endpoint.DefaultClientCredentialsTokenResponseClient;
+import org.springframework.security.oauth2.client.endpoint.DefaultRefreshTokenTokenResponseClient;
+import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
+import org.springframework.security.oauth2.client.endpoint.OAuth2ClientCredentialsGrantRequest;
+import org.springframework.security.oauth2.client.endpoint.OAuth2ClientCredentialsGrantRequestEntityConverter;
+import org.springframework.security.oauth2.client.endpoint.OAuth2RefreshTokenGrantRequest;
+import org.springframework.security.oauth2.client.endpoint.OAuth2RefreshTokenGrantRequestEntityConverter;
+import org.springframework.security.oauth2.client.http.OAuth2ErrorResponseErrorHandler;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.client.web.reactive.function.client.ServletOAuth2AuthorizedClientExchangeFilterFunction;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
+import org.springframework.security.oauth2.core.http.converter.OAuth2AccessTokenResponseHttpMessageConverter;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 
 /**
@@ -33,31 +56,52 @@ import org.springframework.web.reactive.function.client.WebClient;
  * @author Steve Riesenberg
  * @since 0.0.1
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class WebClientConfig {
 
 	@Bean
-	public WebClient webClient(OAuth2AuthorizedClientManager authorizedClientManager) {
+	WebClient webClient(SslContext nettyClientSslContext, OAuth2AuthorizedClientManager authorizedClientManager) {
 		ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client =
 				new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
 		// @formatter:off
 		return WebClient.builder()
+				.clientConnector(createClientConnector(nettyClientSslContext))
 				.apply(oauth2Client.oauth2Configuration())
 				.build();
 		// @formatter:on
 	}
 
+	private ClientHttpConnector createClientConnector(SslContext sslContext) {
+		return new ReactorClientHttpConnector(
+				HttpClient.create()
+						.secure(sslContextSpec -> sslContextSpec.sslContext(sslContext)));
+	}
+
 	@Bean
 	public OAuth2AuthorizedClientManager authorizedClientManager(
 			ClientRegistrationRepository clientRegistrationRepository,
-			OAuth2AuthorizedClientRepository authorizedClientRepository) {
+			OAuth2AuthorizedClientRepository authorizedClientRepository,
+			RestTemplateBuilder builder,
+			Supplier<ClientHttpRequestFactory> clientHttpRequestFactory) {
+
+		RestTemplate restTemplate = builder
+				.requestFactory(clientHttpRequestFactory)
+				.messageConverters(Arrays.asList(
+						new FormHttpMessageConverter(),
+						new OAuth2AccessTokenResponseHttpMessageConverter()))
+				.errorHandler(new OAuth2ErrorResponseErrorHandler())
+				.build();
 
 		// @formatter:off
 		OAuth2AuthorizedClientProvider authorizedClientProvider =
 				OAuth2AuthorizedClientProviderBuilder.builder()
 						.authorizationCode()
-						.refreshToken()
-						.clientCredentials()
+						.refreshToken(refreshToken ->
+								refreshToken.accessTokenResponseClient(
+										createRefreshTokenTokenResponseClient((restTemplate))))
+						.clientCredentials(clientCredentials ->
+								clientCredentials.accessTokenResponseClient(
+										createClientCredentialsTokenResponseClient(restTemplate)))
 						.provider(new DeviceCodeOAuth2AuthorizedClientProvider())
 						.build();
 		// @formatter:on
@@ -71,6 +115,40 @@ public class WebClientConfig {
 				.deviceCodeContextAttributesMapper());
 
 		return authorizedClientManager;
+	}
+
+	private static OAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest> createRefreshTokenTokenResponseClient(RestTemplate restTemplate) {
+		DefaultRefreshTokenTokenResponseClient refreshTokenTokenResponseClient =
+				new DefaultRefreshTokenTokenResponseClient();
+		refreshTokenTokenResponseClient.setRestOperations(restTemplate);
+
+		OAuth2RefreshTokenGrantRequestEntityConverter refreshTokenGrantRequestEntityConverter =
+				new OAuth2RefreshTokenGrantRequestEntityConverter();
+		refreshTokenGrantRequestEntityConverter.addParametersConverter(authorizationGrantRequest -> {
+			MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
+			parameters.add(OAuth2ParameterNames.CLIENT_ID, authorizationGrantRequest.getClientRegistration().getClientId());
+			return parameters;
+		});
+		refreshTokenTokenResponseClient.setRequestEntityConverter(refreshTokenGrantRequestEntityConverter);
+
+		return refreshTokenTokenResponseClient;
+	}
+
+	private static OAuth2AccessTokenResponseClient<OAuth2ClientCredentialsGrantRequest> createClientCredentialsTokenResponseClient(RestTemplate restTemplate) {
+		DefaultClientCredentialsTokenResponseClient clientCredentialsTokenResponseClient =
+				new DefaultClientCredentialsTokenResponseClient();
+		clientCredentialsTokenResponseClient.setRestOperations(restTemplate);
+
+		OAuth2ClientCredentialsGrantRequestEntityConverter clientCredentialsGrantRequestEntityConverter =
+				new OAuth2ClientCredentialsGrantRequestEntityConverter();
+		clientCredentialsGrantRequestEntityConverter.addParametersConverter(authorizationGrantRequest -> {
+			MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
+			parameters.add(OAuth2ParameterNames.CLIENT_ID, authorizationGrantRequest.getClientRegistration().getClientId());
+			return parameters;
+		});
+		clientCredentialsTokenResponseClient.setRequestEntityConverter(clientCredentialsGrantRequestEntityConverter);
+
+		return clientCredentialsTokenResponseClient;
 	}
 
 }

@@ -1,0 +1,14 @@
+Generate Keystore and Truststore
+--------------------------------
+java -jar java-spiffe-helper-0.7.0.jar -c helper.conf
+
+Export Root Certificate
+-----------------------
+openssl pkcs12 -in ./pki/spiffe-truststore.p12 -out ./pki/spiffe-root-ca.pem
+** Enter password: secret
+
+Display Root Certificate
+-----------------------
+openssl x509 -in ./pki/spiffe-root-ca.pem -text
+
+** Add Root Certificate to keychain in Mac

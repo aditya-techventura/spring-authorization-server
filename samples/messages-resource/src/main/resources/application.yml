@@ -1,5 +1,5 @@
 server:
-  port: 8090
+  port: 8443
 
 logging:
   level:
@@ -14,4 +14,9 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:9000
+          jwk-set-uri: https://localhost:9443/oauth2/jwks
+
+spiffe:
+  workload:
+    id: "spiffe://example.org/messages/resource-server"
+    accepted-ids: "spiffe://example.org/messages/client, spiffe://example.org/messages/authorization-server"
