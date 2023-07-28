@@ -17,12 +17,15 @@ package sample;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ImportRuntimeHints;
+import sample.aot.HintsRegistration;
 
 /**
  * @author Joe Grandja
  * @since 1.1
  */
 @SpringBootApplication
+@ImportRuntimeHints(HintsRegistration.class)
 public class DemoAuthorizationServerApplication {
 
 	public static void main(String[] args) {

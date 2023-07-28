@@ -1,0 +1,14 @@
+[
+  {
+    "condition": {
+      "typeReachable": "org.springframework.security.oauth2.server.authorization.jackson2.UnmodifiableMapDeserializer"
+    },
+    "name": "org.springframework.security.oauth2.server.authorization.jackson2.UnmodifiableMapDeserializer",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  }
+]
