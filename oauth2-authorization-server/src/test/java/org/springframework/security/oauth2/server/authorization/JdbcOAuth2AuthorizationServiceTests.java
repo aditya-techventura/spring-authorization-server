@@ -15,6 +15,7 @@
  */
 package org.springframework.security.oauth2.server.authorization;
 
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -28,7 +29,20 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.MissingNode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +57,10 @@ import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.jackson2.CoreJackson2Module;
+import org.springframework.security.jackson2.SecurityJackson2Modules;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2DeviceCode;
@@ -55,6 +73,7 @@ import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.TestRegisteredClients;
+import org.springframework.security.oauth2.server.authorization.jackson2.OAuth2AuthorizationServerJackson2Module;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -106,6 +125,147 @@ public class JdbcOAuth2AuthorizationServiceTests {
 	@AfterEach
 	public void tearDown() {
 		this.db.shutdown();
+	}
+
+	@Test
+	public void testJson2() throws Exception {
+		TypeReference<List<GrantedAuthority>> authoritiesType = new com.fasterxml.jackson.core.type.TypeReference<>() {
+		};
+		ObjectMapper objectMapper = new ObjectMapper();
+		SecurityJackson2Modules.getModules(ClassLoader.getSystemClassLoader()).forEach(objectMapper::registerModule);
+		objectMapper.registerModule(new OAuth2AuthorizationServerJackson2Module());
+		objectMapper.registerModule(new SimpleModule(CoreJackson2Module.class.getName() + "-overrides", new Version(1, 0, 0, null, null, null)) {
+
+			@Override
+			public void setupModule(SetupContext context) {
+				context.setMixInAnnotations(Collections.<Object>unmodifiableList(Collections.emptyList()).getClass(),
+						UnmodifiableListMixin.class);
+
+			}
+
+		});
+
+		String json = """
+                        {"@class":"java.util.Collections$UnmodifiableMap","org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest":{"@class":"org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest","authorizationUri":"http://localhost:8080/oauth2/authorize","authorizationGrantType":{"value":"authorization_code"},"responseType":{"value":"code"},"clientId":"crm","redirectUri":"http://127.0.0.1:8082/login/oauth2/code/spring","scopes":["java.util.Collections$UnmodifiableSet",["user.read","openid"]],"state":"QjdbcbnM2uoxnwksbT1IooOOWxNbkdMVV0LDsptQuH4=","additionalParameters":{"@class":"java.util.Collections$UnmodifiableMap","nonce":"ryv3qPgr5IwFA6LYmLf1QkQY4fRtaZmg_ePB2rSJrqQ","continue":""},"authorizationRequestUri":"http://localhost:8080/oauth2/authorize?response_type=code&client_id=crm&scope=user.read%20openid&state=QjdbcbnM2uoxnwksbT1IooOOWxNbkdMVV0LDsptQuH4%3D&redirect_uri=http://127.0.0.1:8082/login/oauth2/code/spring&nonce=ryv3qPgr5IwFA6LYmLf1QkQY4fRtaZmg_ePB2rSJrqQ&continue=","attributes":{"@class":"java.util.Collections$UnmodifiableMap"}},"java.security.Principal":{"@class":"org.springframework.security.authentication.UsernamePasswordAuthenticationToken","authorities":["java.util.Collections$UnmodifiableRandomAccessList",[{"@class":"org.springframework.security.core.authority.SimpleGrantedAuthority","authority":"ROLE_USER"}]],"details":{"@class":"org.springframework.security.web.authentication.WebAuthenticationDetails","remoteAddress":"0:0:0:0:0:0:0:1","sessionId":"745F400BA9E8317369ECFD9B9E826695"},"authenticated":true,"principal":{"@class":"org.springframework.security.core.userdetails.User","password":null,"username":"jlong","authorities":["java.util.Collections$UnmodifiableSet",[{"@class":"org.springframework.security.core.authority.SimpleGrantedAuthority","authority":"ROLE_USER"}]],"accountNonExpired":true,"accountNonLocked":true,"credentialsNonExpired":true,"enabled":true},"credentials":null}}
+                    """;
+
+
+		String principalJson = """
+{
+  "@class": "java.util.Collections$UnmodifiableMap",
+  "principal": {
+    "@class": "org.springframework.security.core.userdetails.User",
+    "password": null,
+    "username": "jlong",
+    "authorities": [
+      "java.util.Collections$UnmodifiableSet",
+      [
+        {
+          "@class": "org.springframework.security.core.authority.SimpleGrantedAuthority",
+          "authority": "ROLE_USER"
+        }
+      ]
+    ],
+    "accountNonExpired": true,
+    "accountNonLocked": true,
+    "credentialsNonExpired": true,
+    "enabled": true
+  }
+}
+                    """;
+
+		String authoritiesJson = """
+{
+  "@class": "java.util.Collections$UnmodifiableMap",
+  "java.security.Principal": {
+    "@class": "org.springframework.security.authentication.UsernamePasswordAuthenticationToken",
+    "authorities": [
+      "java.util.Collections$UnmodifiableRandomAccessList",
+      [
+        {
+          "@class": "org.springframework.security.core.authority.SimpleGrantedAuthority",
+          "authority": "ROLE_USER"
+        }
+      ]
+    ],
+    "details": {
+      "@class": "org.springframework.security.web.authentication.WebAuthenticationDetails",
+      "remoteAddress": "0:0:0:0:0:0:0:1",
+      "sessionId": "745F400BA9E8317369ECFD9B9E826695"
+    },
+    "authenticated": true,
+    "principal": null,
+    "credentials": null
+  }
+}
+                    """;
+
+
+
+
+		json = principalJson;
+
+
+		Map<String, Object> attributes = parseMap(json, objectMapper);
+
+		User principal = (User) attributes.get("principal");
+		String principalString = writeMap(objectMapper, principal);
+
+		TypeReference<Set<GrantedAuthority>> authoritiesType2 = new com.fasterxml.jackson.core.type.TypeReference<>() {
+		};
+
+
+		JsonNode jsonNode = objectMapper.readTree(json);
+		JsonParser authoritiesJsonNode = readJsonNode(jsonNode, "authorities").traverse(objectMapper);
+		objectMapper.readValue(authoritiesJsonNode, authoritiesType2).forEach(System.out::println);
+
+	}
+
+	private static JsonNode readJsonNode(JsonNode jsonNode, String field) {
+		return jsonNode.has(field) ? jsonNode.get(field) : MissingNode.getInstance();
+	}
+
+	@Test
+	public void testJson() throws Exception {
+
+		var gaList = new com.fasterxml.jackson.core.type.TypeReference<List<GrantedAuthority>>() {
+		};
+		var objectMapper = new ObjectMapper();
+		var classLoader = JdbcOAuth2AuthorizationService.class.getClassLoader();
+		var securityModules = SecurityJackson2Modules.getModules(classLoader);
+		objectMapper.registerModules(securityModules);
+		objectMapper.registerModule(new OAuth2AuthorizationServerJackson2Module());
+		var json = """
+
+{"@class":"java.util.Collections$UnmodifiableMap","org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest":{"@class":"org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest","authorizationUri":"http://localhost:8080/oauth2/authorize","authorizationGrantType":{"value":"authorization_code"},"responseType":{"value":"code"},"clientId":"crm","redirectUri":"http://127.0.0.1:8082/login/oauth2/code/spring","scopes":["java.util.Collections$UnmodifiableSet",["user.read","openid"]],"state":"shZOE2J_HVxAGdHdSbrqKJY6xoYPTHXTpK-_oVh3BqY=","additionalParameters":{"@class":"java.util.Collections$UnmodifiableMap","nonce":"J_gHhZNYPWoZBVEAAL_0fzMpbH0vIWUZuUcmVoy1kks","continue":""},"authorizationRequestUri":"http://localhost:8080/oauth2/authorize?response_type=code&client_id=crm&scope=user.read%20openid&state=shZOE2J_HVxAGdHdSbrqKJY6xoYPTHXTpK-_oVh3BqY%3D&redirect_uri=http://127.0.0.1:8082/login/oauth2/code/spring&nonce=J_gHhZNYPWoZBVEAAL_0fzMpbH0vIWUZuUcmVoy1kks&continue=","attributes":{"@class":"java.util.Collections$UnmodifiableMap"}},"java.security.Principal":{"@class":"org.springframework.security.authentication.UsernamePasswordAuthenticationToken","authorities":["java.util.Collections$UnmodifiableRandomAccessList",[{"@class":"org.springframework.security.core.authority.SimpleGrantedAuthority","authority":"ROLE_USER"}]],"details":{"@class":"org.springframework.security.web.authentication.WebAuthenticationDetails","remoteAddress":"0:0:0:0:0:0:0:1","sessionId":"AF9B71B27FDAC33F05DEB57E325E3FE6"},"authenticated":true,"principal":{"@class":"org.springframework.security.core.userdetails.User","password":null,"username":"jlong","authorities":["java.util.Collections$UnmodifiableSet",[{"@class":"org.springframework.security.core.authority.SimpleGrantedAuthority","authority":"ROLE_USER"}]],"accountNonExpired":true,"accountNonLocked":true,"credentialsNonExpired":true,"enabled":true},"credentials":null}}
+
+                    """;
+//		var jsonNode = objectMapper.readTree(json);
+//		var authoritiesJsonNode = readJsonNode(jsonNode, "authorities").traverse(objectMapper);
+//		var authorities = objectMapper.readValue(authoritiesJsonNode, gaList);
+
+		var authorities = parseMap(json, objectMapper);
+
+		System.out.println("");
+//		for (var ga : authorities)
+//			System.out.println(ga.toString());
+
+	}
+
+	private Map<String, Object> parseMap(String data, ObjectMapper objectMapper) {
+		try {
+			return objectMapper.readValue(data, new TypeReference<Map<String, Object>>() {});
+		} catch (Exception ex) {
+			throw new IllegalArgumentException(ex.getMessage(), ex);
+		}
+	}
+
+	private String writeMap(ObjectMapper objectMapper, Object data) {
+		try {
+			return objectMapper.writeValueAsString(data);
+		} catch (Exception ex) {
+			throw new IllegalArgumentException(ex.getMessage(), ex);
+		}
 	}
 
 	@Test

@@ -74,6 +74,7 @@ public class DefaultSecurityConfig {
 				.username("user1")
 				.password("password")
 				.roles("USER")
+				.roles("USER_2")
 				.build();
 		return new InMemoryUserDetailsManager(user);
 	}
