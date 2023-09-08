@@ -73,7 +73,7 @@ public class JsonTests {
   "java.security.Principal": {
     "@class": "org.springframework.security.authentication.UsernamePasswordAuthenticationToken",
     "authorities": [
-      "java.util.Collections$UnmodifiableRandomAccessList",
+      "java.util.ArrayList",
       [
         {
           "@class": "org.springframework.security.core.authority.SimpleGrantedAuthority",
