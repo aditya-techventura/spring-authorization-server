@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.security.oauth2.server.authorization;
+package sample;
 
 import java.io.IOException;
 import java.util.ArrayList;
