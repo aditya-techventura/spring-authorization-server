@@ -1,5 +1,6 @@
 package sample;
 
+import java.util.Collections;
 import java.util.concurrent.Callable;
 
 import org.thymeleaf.expression.Lists;
@@ -7,6 +8,7 @@ import sample.web.AuthorizationConsentController;
 
 import org.springframework.aot.hint.BindingReflectionHintsRegistrar;
 import org.springframework.aot.hint.ExecutableMode;
+import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.ReflectionHints;
 import org.springframework.aot.hint.ResourceHints;
 import org.springframework.aot.hint.RuntimeHints;
@@ -19,6 +21,7 @@ import org.springframework.security.web.jackson2.WebServletJackson2Module;
 import org.springframework.security.web.server.jackson2.WebServerJackson2Module;
 import org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod;
 
+import static org.springframework.aot.hint.MemberCategory.DECLARED_CLASSES;
 import static org.springframework.aot.hint.MemberCategory.DECLARED_FIELDS;
 import static org.springframework.aot.hint.MemberCategory.INVOKE_DECLARED_CONSTRUCTORS;
 import static org.springframework.aot.hint.MemberCategory.INVOKE_DECLARED_METHODS;
@@ -34,6 +37,13 @@ public class HintsRegistration implements RuntimeHintsRegistrar {
             reflection.registerType(Class.forName("org.springframework.web.servlet.handler.AbstractHandlerMethodMapping$EmptyHandler"), INVOKE_DECLARED_METHODS);
             reflection.registerType(ServletInvocableHandlerMethod.class, DECLARED_FIELDS, INVOKE_DECLARED_CONSTRUCTORS, INVOKE_DECLARED_METHODS);
             reflection.registerType(OAuth2AuthorizationCodeRequestAuthenticationToken.class, DECLARED_FIELDS, INVOKE_DECLARED_CONSTRUCTORS, INVOKE_DECLARED_METHODS);
+
+//			reflection.registerType(Collections.class, DECLARED_CLASSES, );
+
+			reflection.registerType(Class.forName("java.util.Collections$UnmodifiableRandomAccessList"), MemberCategory.values());
+			reflection.registerType(Class.forName("java.util.Collections$UnmodifiableList"), MemberCategory.values());
+			reflection.registerType(Class.forName("java.util.Collections$UnmodifiableCollection"), MemberCategory.values());
+
 
 			bindingRegistrar.registerReflectionHints(reflection, Class.forName("org.springframework.security.oauth2.server.authorization.jackson2.UnmodifiableListMixin"));
 

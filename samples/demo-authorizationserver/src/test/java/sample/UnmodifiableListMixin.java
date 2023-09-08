@@ -15,13 +15,15 @@
  */
 package sample;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.WRAPPER_ARRAY)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY)
 @JsonDeserialize(using = UnmodifiableListDeserializer.class)
 class UnmodifiableListMixin {
 
@@ -29,12 +31,12 @@ class UnmodifiableListMixin {
 	UnmodifiableListMixin(Set<?> s) {
 	}
 
-//	@JsonCreator
-//	UnmodifiableListMixin(Collection<?> s) {
-//	}
+	@JsonCreator
+	UnmodifiableListMixin(List<?> s) {
+	}
 
-//	@JsonCreator
-//	UnmodifiableListMixin(List<?> s) {
-//	}
+	@JsonCreator
+	UnmodifiableListMixin(Collection<?> s) {
+	}
 
 }

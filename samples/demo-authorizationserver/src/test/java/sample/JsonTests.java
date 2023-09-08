@@ -15,11 +15,14 @@
  */
 package sample;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.junit.jupiter.api.Test;
 import sample.aot.HintsRegistration;
 
@@ -33,6 +36,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
+import org.springframework.security.jackson2.CoreJackson2Module;
 import org.springframework.security.jackson2.SecurityJackson2Modules;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.authentication.OAuth2LoginAuthenticationToken;
@@ -63,9 +67,40 @@ public class JsonTests {
 		};
 		var classLoader = JdbcOAuth2AuthorizationService.class.getClassLoader();
 		var securityModules = SecurityJackson2Modules.getModules(classLoader);
-		objectMapper.registerModules(securityModules);
+		this.objectMapper.registerModules(securityModules);
+		this.objectMapper.registerModule(new OAuth2AuthorizationServerJackson2Module());
 
-		objectMapper.registerModule(new OAuth2AuthorizationServerJackson2Module());
+		this.objectMapper.registerModule(new SimpleModule(CoreJackson2Module.class.getName() + "-overrides", new Version(1, 0, 0, null, null, null)) {
+
+			@Override
+			public void setupModule(SetupContext context) {
+				Class<?> unmodifiableRandomAccessList = null;
+				try {
+					unmodifiableRandomAccessList = Class.forName("java.util.Collections$UnmodifiableRandomAccessList");
+					System.out.println("************************ LOADED java.util.Collections$UnmodifiableRandomAccessList ");
+
+					for (var m : unmodifiableRandomAccessList.getDeclaredMethods()){
+						System.out.println("********** METHOD -> " + m.getName());
+					}
+
+				} catch (ClassNotFoundException e) {
+					System.out.println("************************ ERROR loading java.util.Collections$UnmodifiableRandomAccessList ");
+				}
+
+				if (unmodifiableRandomAccessList != null) {
+					context.setMixInAnnotations(unmodifiableRandomAccessList, UnmodifiableListMixin.class);
+				}
+
+
+//				context.setMixInAnnotations(Collections.<Object>unmodifiableList(Collections.emptyList()).getClass(),
+//						UnmodifiableListMixin.class);
+//				context.setMixInAnnotations(Collections.<Object>unmodifiableCollection(Collections.emptyList()).getClass(),
+//						UnmodifiableListMixin.class);
+
+			}
+
+		});
+
 		var json = """
 
 {
@@ -73,7 +108,7 @@ public class JsonTests {
   "java.security.Principal": {
     "@class": "org.springframework.security.authentication.UsernamePasswordAuthenticationToken",
     "authorities": [
-      "java.util.ArrayList",
+      "java.util.Collections$UnmodifiableRandomAccessList",
       [
         {
           "@class": "org.springframework.security.core.authority.SimpleGrantedAuthority",
@@ -96,11 +131,11 @@ public class JsonTests {
         [
           {
             "@class": "org.springframework.security.core.authority.SimpleGrantedAuthority",
-            "authority": "ROLE_A"
+            "authority": "ROLE_C"
           },
           {
             "@class": "org.springframework.security.core.authority.SimpleGrantedAuthority",
-            "authority": "ROLE_B"
+            "authority": "ROLE_D"
           }
         ]
       ],
