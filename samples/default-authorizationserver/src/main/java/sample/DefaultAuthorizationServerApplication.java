@@ -17,13 +17,12 @@ package sample;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.oauth2.server.servlet.OAuth2AuthorizationServerAutoConfiguration;
 
 /**
  * @author Joe Grandja
  * @since 0.0.1
  */
-@SpringBootApplication(exclude = OAuth2AuthorizationServerAutoConfiguration.class )
+@SpringBootApplication
 public class DefaultAuthorizationServerApplication {
 
 	public static void main(String[] args) {
