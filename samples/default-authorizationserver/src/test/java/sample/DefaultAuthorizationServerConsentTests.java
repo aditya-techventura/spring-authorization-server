@@ -61,7 +61,7 @@ public class DefaultAuthorizationServerConsentTests {
 	private final String redirectUri = "http://127.0.0.1/login/oauth2/code/messaging-client-oidc";
 
 	private final String authorizationRequestUri = UriComponentsBuilder
-			.fromPath("/oauth2/authorize")
+			.fromPath("/oauth2/v1/authorize")
 			.queryParam("response_type", "code")
 			.queryParam("client_id", "messaging-client")
 			.queryParam("scope", "openid message.read message.write")

@@ -49,7 +49,7 @@ public class DefaultAuthorizationServerApplicationTests {
 	private static final String REDIRECT_URI = "http://127.0.0.1:8080/login/oauth2/code/messaging-client-oidc";
 
 	private static final String AUTHORIZATION_REQUEST = UriComponentsBuilder
-			.fromPath("/oauth2/authorize")
+			.fromPath("/oauth2/v1/authorize")
 			.queryParam("response_type", "code")
 			.queryParam("client_id", "messaging-client")
 			.queryParam("scope", "openid")
