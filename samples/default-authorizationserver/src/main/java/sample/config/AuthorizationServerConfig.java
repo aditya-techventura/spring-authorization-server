@@ -66,7 +66,13 @@ public class AuthorizationServerConfig {
 
 		// @formatter:off
 		http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
-			.oidc(Customizer.withDefaults())	// Enable OpenID Connect 1.0
+			.oidc(oidc ->
+				oidc
+					.providerConfigurationEndpoint(providerConfiguration ->
+						providerConfiguration
+							.providerConfigurationCustomizer(builder ->
+									builder.grantType("urn:ietf:params:oauth:grant-type:custom_code")))
+			)
 			.tokenEndpoint(tokenEndpoint ->
 				tokenEndpoint
 					.accessTokenRequestConverter(
