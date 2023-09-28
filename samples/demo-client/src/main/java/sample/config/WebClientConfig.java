@@ -15,6 +15,7 @@
  */
 package sample.config;
 
+import sample.authorization.CustomCodeOAuth2AuthorizedClientProvider;
 import sample.authorization.DeviceCodeOAuth2AuthorizedClientProvider;
 
 import org.springframework.context.annotation.Bean;
@@ -58,6 +59,7 @@ public class WebClientConfig {
 						.authorizationCode()
 						.refreshToken()
 						.clientCredentials()
+						.provider(new CustomCodeOAuth2AuthorizedClientProvider())
 						.provider(new DeviceCodeOAuth2AuthorizedClientProvider())
 						.build();
 		// @formatter:on

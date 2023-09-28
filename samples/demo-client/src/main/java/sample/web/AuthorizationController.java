@@ -20,8 +20,6 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
@@ -163,42 +161,17 @@ public class AuthorizationController {
 			@RegisteredOAuth2AuthorizedClient("messaging-client-custom-code")
 			OAuth2AuthorizedClient authorizedClient) {
 
-		String accessToken = obtainAccessTokenUsingCustomCodeGrant();
-
 		String[] messages = this.webClient
 				.get()
 				.uri(this.messagesBaseUri)
-				.header(HttpHeaders.AUTHORIZATION, "Bearer %s".formatted(accessToken))
+				.attributes(oauth2AuthorizedClient(authorizedClient))
 				.retrieve()
 				.bodyToMono(String[].class)
 				.block();
 		model.addAttribute("messages", messages);
-		model.addAttribute("accessToken", accessToken);
+		model.addAttribute("accessToken", authorizedClient.getAccessToken().getTokenValue());
 
 		return "index";
-	}
-
-	private String obtainAccessTokenUsingCustomCodeGrant() {
-		final ParameterizedTypeReference<Map<String, Object>> STRING_OBJECT_MAP = new ParameterizedTypeReference<>() {
-		};
-
-		MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
-		parameters.add(OAuth2ParameterNames.GRANT_TYPE, "urn:ietf:params:oauth:grant-type:custom_code");
-		parameters.add(OAuth2ParameterNames.CODE, "code1234");
-		parameters.add(OAuth2ParameterNames.SCOPE, "message.read");
-
-		Map<String, Object> tokenResponse = this.webClient
-				.post()
-				.uri("http://localhost:9000/oauth2/v1/token")
-				.headers((headers) -> headers.setBasicAuth("messaging-client", "secret"))
-				.contentType(MediaType.APPLICATION_FORM_URLENCODED)
-				.accept(MediaType.APPLICATION_JSON)
-				.body(BodyInserters.fromFormData(parameters))
-				.retrieve()
-				.bodyToMono(STRING_OBJECT_MAP)
-				.block();
-
-		return (String) tokenResponse.get(OAuth2ParameterNames.ACCESS_TOKEN);
 	}
 
 	@GetMapping(value = "/authorize", params = "grant_type=device_code")
