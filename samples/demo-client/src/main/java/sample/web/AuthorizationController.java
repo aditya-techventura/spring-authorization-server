@@ -30,7 +30,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-import static org.springframework.security.oauth2.client.web.reactive.function.client.ServletOAuth2AuthorizedClientExchangeFilterFunction.clientRegistrationId;
 import static org.springframework.security.oauth2.client.web.reactive.function.client.ServletOAuth2AuthorizedClientExchangeFilterFunction.oauth2AuthorizedClient;
 
 /**
@@ -61,6 +60,7 @@ public class AuthorizationController {
 				.bodyToMono(String[].class)
 				.block();
 		model.addAttribute("messages", messages);
+		model.addAttribute("accessToken", authorizedClient.getAccessToken().getTokenValue());
 
 		return "index";
 	}
@@ -82,16 +82,19 @@ public class AuthorizationController {
 	}
 
 	@GetMapping(value = "/authorize", params = "grant_type=client_credentials")
-	public String clientCredentialsGrant(Model model) {
+	public String clientCredentialsGrant(Model model,
+			@RegisteredOAuth2AuthorizedClient("messaging-client-client-credentials")
+			OAuth2AuthorizedClient authorizedClient) {
 
 		String[] messages = this.webClient
 				.get()
 				.uri(this.messagesBaseUri)
-				.attributes(clientRegistrationId("messaging-client-client-credentials"))
+				.attributes(oauth2AuthorizedClient(authorizedClient))
 				.retrieve()
 				.bodyToMono(String[].class)
 				.block();
 		model.addAttribute("messages", messages);
+		model.addAttribute("accessToken", authorizedClient.getAccessToken().getTokenValue());
 
 		return "index";
 	}
