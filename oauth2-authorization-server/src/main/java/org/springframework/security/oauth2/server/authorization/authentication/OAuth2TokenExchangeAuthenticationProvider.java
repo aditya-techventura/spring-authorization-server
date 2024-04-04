@@ -67,6 +67,7 @@ import static org.springframework.security.oauth2.server.authorization.authentic
  * @see <a target="_blank" href="https://datatracker.ietf.org/doc/html/rfc8693#section-1">Section 1 Introduction</a>
  * @see <a target="_blank" href="https://datatracker.ietf.org/doc/html/rfc8693#section-2.1">Section 2.1 Request</a>
  */
+// TODO Add tests
 public final class OAuth2TokenExchangeAuthenticationProvider implements AuthenticationProvider {
 
 	private static final String ERROR_URI = "https://datatracker.ietf.org/doc/html/rfc6749#section-5.2";
@@ -140,6 +141,7 @@ public final class OAuth2TokenExchangeAuthenticationProvider implements Authenti
 				!Jwt.class.isAssignableFrom(subjectToken.getToken().getClass())) {
 			// TODO: Need a way to validate subject_token_type, since access tokens
 			//  are always stored as OAuth2AccessToken instead of Jwt.
+
 			//throw new OAuth2AuthenticationException(OAuth2ErrorCodes.INVALID_REQUEST);
 		}
 

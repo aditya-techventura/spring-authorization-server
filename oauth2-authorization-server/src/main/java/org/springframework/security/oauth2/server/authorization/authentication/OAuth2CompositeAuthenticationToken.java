@@ -33,11 +33,26 @@ import org.springframework.util.Assert;
  * @since 1.3
  * @see OAuth2TokenExchangeAuthenticationToken
  */
+// TODO Rename to OAuth2TokenExchangeCompositeAuthenticationToken
+// TODO See comments in OAuth2ActorAuthenticationToken re: OAuth2TokenExchangeActor
 public class OAuth2CompositeAuthenticationToken extends AbstractAuthenticationToken implements Serializable {
+	// TODO Remove implements Serializable (Authentication extends Serializable)
 
-	private final Authentication subject;
+	private final Authentication subject;		// subjectAuthorizationPrincipal
 
 	private final List<Authentication> actors;
+
+//	private final List<OAuth2TokenExchangeActor> actors;
+
+/*
+
+	public class OAuth2TokenExchangeActor {
+		private Map<String, Object> claims;		// May include iss, sub, etc.
+
+	}
+
+
+ */
 
 	public OAuth2CompositeAuthenticationToken(Authentication subject, List<Authentication> actors) {
 		super(subject != null ? subject.getAuthorities() : null);
@@ -66,4 +81,5 @@ public class OAuth2CompositeAuthenticationToken extends AbstractAuthenticationTo
 	public List<Authentication> getActors() {
 		return this.actors;
 	}
+
 }

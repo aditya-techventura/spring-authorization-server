@@ -127,6 +127,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author Alexey Nesterov
  * @author Joe Grandja
  */
+// TODO Add integration tests to new test class OAuth2TokenExchangeGrantTests - use JdbcOAuth2AuthorizationService to test the new mixins
 @ExtendWith(SpringTestContextExtension.class)
 public class OAuth2ClientCredentialsGrantTests {
 	private static final String DEFAULT_TOKEN_ENDPOINT_URI = "/oauth2/token";

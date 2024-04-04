@@ -66,6 +66,13 @@ public class OAuth2TokenExchangeAuthenticationToken extends OAuth2AuthorizationG
 	 * @param clientPrincipal the authenticated client principal
 	 * @param additionalParameters the additional parameters
 	 */
+	// TODO Let's re-order the parameters (and fields/getters) as follows:
+//	public OAuth2TokenExchangeAuthenticationToken(String subjectToken, String subjectTokenType, Authentication clientPrincipal,
+//			@Nullable String requestedTokenType, @Nullable String actorToken, @Nullable String actorTokenType,
+//			@Nullable List<String> resources, @Nullable List<String> audiences, @Nullable Set<String> scopes,
+//			@Nullable Map<String, Object> additionalParameters) {
+
+	// TODO Make resources and audiences a `Set` (and @Nullable) to be consistent with scopes
 	public OAuth2TokenExchangeAuthenticationToken(List<String> resources, List<String> audiences,
 			@Nullable Set<String> scopes, @Nullable String requestedTokenType, String subjectToken,
 			String subjectTokenType, @Nullable String actorToken, @Nullable String actorTokenType,

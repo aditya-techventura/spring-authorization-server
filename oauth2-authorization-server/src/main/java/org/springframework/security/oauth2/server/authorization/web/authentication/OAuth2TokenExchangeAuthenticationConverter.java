@@ -52,6 +52,7 @@ import org.springframework.util.StringUtils;
  * @see OAuth2TokenExchangeAuthenticationToken
  * @see OAuth2TokenEndpointFilter
  */
+// TODO Add tests
 public final class OAuth2TokenExchangeAuthenticationConverter implements AuthenticationConverter {
 
 	private static final String TOKEN_TYPE_IDENTIFIERS_URI = "https://datatracker.ietf.org/doc/html/rfc8693#section-3";

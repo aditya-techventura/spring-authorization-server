@@ -31,7 +31,26 @@ import org.springframework.util.Assert;
  * @since 1.3
  * @see OAuth2CompositeAuthenticationToken
  */
+
+/*
+Spec references:
+
+The act claim value is a JSON object, and members in the JSON object are claims that identify the actor.
+The claims that make up the act claim identify and possibly provide additional information about the actor.
+For example, the combination of the two claims iss and sub might be necessary to uniquely identify an actor.
+
+// TODO I'm not sure this needs to be an Authentication - consider a simple domain class, for example:
+
+	public class OAuth2TokenExchangeActor {
+		private Map<String, Object> claims;		// May include iss, sub, etc.
+		private @Nullable OAuth2TokenExchangeActor previousActor;
+
+	}
+
+ */
+
 public class OAuth2ActorAuthenticationToken extends AbstractAuthenticationToken implements Serializable {
+	// TODO Remove implements Serializable (Authentication extends Serializable)
 
 	private final String name;
 
