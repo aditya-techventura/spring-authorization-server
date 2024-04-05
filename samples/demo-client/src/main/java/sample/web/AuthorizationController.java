@@ -134,6 +134,12 @@ public class AuthorizationController {
 		return "index";
 	}
 
+	// TODO
+	// This is a great (and simple) example demonstrating the Delegation use case!
+	// Let's also add an Impersonation use case.
+	// We can have 2 menu items:
+	// 	- Token Exchange (Delegation)
+	// 	- Token Exchange (Impersonation)
 	@GetMapping(value = "/authorize", params = "grant_type=token_exchange")
 	public String tokenExchangeGrant(Model model) {
 

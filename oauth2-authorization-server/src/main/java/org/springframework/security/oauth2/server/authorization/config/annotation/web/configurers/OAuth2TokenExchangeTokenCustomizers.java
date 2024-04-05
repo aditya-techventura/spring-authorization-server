@@ -50,6 +50,10 @@ final class OAuth2TokenExchangeTokenCustomizers {
 		return (context) -> context.getClaims().claims((claims) -> customize(context, claims));
 	}
 
+	// TODO
+	// I think we should move this logic into JwtGenerator.generate() and OAuth2AccessTokenGenerator.generate().
+	// Similar logic can be found in JwtGenerator for AuthorizationGrantType.AUTHORIZATION_CODE and AuthorizationGrantType.REFRESH_TOKEN
+	// We could share this logic as a utility method between the 2 token generator's
 	private static void customize(OAuth2TokenContext context, Map<String, Object> claims) {
 		if (!AuthorizationGrantType.TOKEN_EXCHANGE.equals(context.getAuthorizationGrantType())) {
 			return;
@@ -59,7 +63,22 @@ final class OAuth2TokenExchangeTokenCustomizers {
 			// Customize the token claims when audience is present in the request
 			List<String> audience = tokenExchangeAuthentication.getAudiences();
 			if (!CollectionUtils.isEmpty(audience)) {
+				// FIXME I think this will override the default `aud` `registeredClient.getClientId()`? We should append to it
 				claims.put(OAuth2TokenClaimNames.AUD, audience);
+
+				// Spec reference:
+				/*
+					An authorization server may be unwilling or unable to fulfill any token request,
+					but the likelihood of an unfulfillable request is significantly higher when very broad access rights are being solicited.
+					As such, in the absence of specific knowledge about the relationship of systems in a deployment,
+					clients should exercise discretion in the breadth of the access requested, particularly the number of target services.
+					An authorization server can use the invalid_target error code, defined in Section 2.2.2,
+					to inform a client that it requested access to too many target services simultaneously.
+
+				// TODO As per above, I wonder if we should check the number of aud requested? And potentially limit the number?
+
+				 */
+
 			}
 		}
 
