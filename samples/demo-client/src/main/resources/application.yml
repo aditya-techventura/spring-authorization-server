@@ -80,6 +80,13 @@ spring:
             authorization-grant-type: urn:ietf:params:oauth:grant-type:device_code
             scope: message.read,message.write
             client-name: messaging-client-device-code
+          private-key-jwt-messaging-client-client-credentials:
+            provider: spring
+            client-id: messaging-client
+            client-authentication-method: private_key_jwt
+            authorization-grant-type: client_credentials
+            scope: message.read,message.write
+            client-name: private-key-jwt-messaging-client-client-credentials
           mtls-demo-client-client-credentials:
             provider: spring-tls
             client-id: mtls-demo-client

@@ -18,13 +18,20 @@ package sample.web;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKMatcher;
+import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.Base64;
 
 import org.springframework.boot.ssl.SslBundle;
@@ -40,8 +47,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class JwkSetController {
 	private final JWKSet jwkSet;
 
-	public JwkSetController(SslBundles sslBundles) throws Exception {
-		this.jwkSet = initJwkSet(sslBundles);
+	public JwkSetController(SslBundles sslBundles, JWKSource<SecurityContext> jwkSource) throws Exception {
+		this.jwkSet = initJwkSet(sslBundles, jwkSource);
 	}
 
 	@GetMapping("/jwks")
@@ -49,20 +56,26 @@ public class JwkSetController {
 		return this.jwkSet.toJSONObject();
 	}
 
-	private static JWKSet initJwkSet(SslBundles sslBundles) throws Exception {
+	private static JWKSet initJwkSet(SslBundles sslBundles, JWKSource<SecurityContext> jwkSource) throws Exception {
 		SslBundle sslBundle = sslBundles.getBundle("self-signed-demo-client");
 		KeyStore keyStore = sslBundle.getStores().getKeyStore();
 		String alias = sslBundle.getKey().getAlias();
 
 		Certificate certificate = keyStore.getCertificate(alias);
 
-		RSAKey rsaKey = new RSAKey.Builder((RSAPublicKey) certificate.getPublicKey())
+		RSAKey selfSignedCertificatePublicKey = new RSAKey.Builder((RSAPublicKey) certificate.getPublicKey())
 				.keyUse(KeyUse.SIGNATURE)
 				.keyID(UUID.randomUUID().toString())
 				.x509CertChain(Collections.singletonList(Base64.encode(certificate.getEncoded())))
 				.build();
 
-		return new JWKSet(rsaKey);
+		List<JWK> jwks = new ArrayList<>();
+		jwks.add(selfSignedCertificatePublicKey);
+
+		JWKSelector jwkSelector = new JWKSelector(new JWKMatcher.Builder().build());
+		jwks.addAll(jwkSource.get(jwkSelector, null));
+
+		return new JWKSet(jwks);
 	}
 
 }

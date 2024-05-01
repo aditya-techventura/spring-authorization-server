@@ -104,6 +104,21 @@ public class AuthorizationController {
 		return "index";
 	}
 
+	@GetMapping(value = "/authorize", params = {"grant_type=client_credentials", "client_auth=private_key_jwt"})
+	public String clientCredentialsGrantUsingPrivateKeyJwt(Model model) {
+
+		String[] messages = this.defaultClientWebClient
+				.get()
+				.uri(this.messagesBaseUri)
+				.attributes(clientRegistrationId("private-key-jwt-messaging-client-client-credentials"))
+				.retrieve()
+				.bodyToMono(String[].class)
+				.block();
+		model.addAttribute("messages", messages);
+
+		return "index";
+	}
+
 	@GetMapping(value = "/authorize", params = {"grant_type=client_credentials", "client_auth=mtls"})
 	public String clientCredentialsGrantUsingMutualTLS(Model model) {
 

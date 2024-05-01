@@ -40,6 +40,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
@@ -136,6 +137,7 @@ public class AuthorizationServerConfig {
 				.clientId("messaging-client")
 				.clientSecret("{noop}secret")
 				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+				.clientAuthenticationMethod(ClientAuthenticationMethod.PRIVATE_KEY_JWT)
 				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
 				.authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
 				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
@@ -147,7 +149,13 @@ public class AuthorizationServerConfig {
 				.scope("message.read")
 				.scope("message.write")
 				.scope("user.read")
-				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
+				.clientSettings(
+						ClientSettings.builder()
+								.requireAuthorizationConsent(true)
+								.jwkSetUrl("http://localhost:8080/jwks")
+								.tokenEndpointAuthenticationSigningAlgorithm(SignatureAlgorithm.RS256)
+								.build()
+				)
 				.build();
 
 		RegisteredClient deviceClient = RegisteredClient.withId(UUID.randomUUID().toString())
