@@ -29,4 +29,14 @@ dependencies {
 	implementation "org.webjars:bootstrap:5.2.3"
 	implementation "org.webjars:popper.js:2.9.3"
 	implementation "org.webjars:jquery:3.6.4"
+
+	testImplementation "org.springframework.boot:spring-boot-starter-test"
+	testImplementation "org.springframework.boot:spring-boot-starter-oauth2-authorization-server"
+	testImplementation("org.springframework.experimental.boot:spring-boot-testjars:0.0.1") {
+		capabilities {
+			requireCapability("org.springframework.experimental.boot:spring-boot-testjars-maven")
+		}
+	}
+	testImplementation "org.springframework.boot:spring-boot-testcontainers"
+	testImplementation "org.apache.commons:commons-exec:1.3"
 }
