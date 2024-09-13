@@ -1,4 +1,7 @@
+
 plugins {
+        id "java"
+        id "maven-publish"
 	id "io.spring.convention.root"
 	id "io.spring.security.release" version "1.0.3"
 }
@@ -21,3 +24,23 @@ if (hasProperty("buildScan")) {
 		termsOfServiceAgree = "yes"
 	}
 }
+
+checkstyle {
+    sourceSets = []
+}
+
+publishing {
+    publications {
+        myLibrary(MavenPublication) {
+            from components.java
+        }
+    }
+
+    repositories {
+        maven {
+            name = 'myRepo'
+            url = layout.buildDirectory.dir("repo")
+        }
+    }
+}
+

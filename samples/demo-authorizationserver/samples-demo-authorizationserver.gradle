@@ -2,6 +2,7 @@ plugins {
 	id "org.springframework.boot" version "3.2.2"
 	id "io.spring.dependency-management" version "1.1.0"
 	id "java"
+        id "maven-publish"
 }
 
 group = project.rootProject.group
@@ -34,4 +35,19 @@ dependencies {
 
 tasks.named("test") {
 	useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        myLibrary(MavenPublication) {
+            from components.java
+        }
+    }
+
+    repositories {
+        maven {
+            name = 'myRepo'
+            url = layout.buildDirectory.dir("repo")
+        }
+    }
 }
