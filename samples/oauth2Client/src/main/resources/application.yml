@@ -55,5 +55,26 @@ spring:
           spring-tls:
             token-uri: https://localhost:9443/oauth2/token
 
+
+clientResolver:
+  headers: >
+    X-Brand,
+    X-App-Name,
+    X-Franchise,
+    X-Channel
+
+client-backend-mapping:
+  config:
+    nwg-mob-channel-franchise-idx:
+      clientKey: nwg-mob-channel-franchise
+      clientName: private-key-jwt-messaging-client-client-credentials
+      baseUri: https://127.0.0.1:8443/messages
+      sslBundleName: demo-client
+    nwg-mob-channel-franchise-consent:
+      clientKey: nwg-mob-channel-franchise
+      clientName: private-key-jwt-messaging-client-client-credentials
+      baseUri: https://127.0.0.1:8443/messages
+      sslBundleName: demo-client
+
 messages:
   base-uri: https://127.0.0.1:8443/messages

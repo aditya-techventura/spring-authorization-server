@@ -2,7 +2,6 @@ package org.example.secure.config;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import jakarta.servlet.http.HttpServletRequest;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.BasicHttpClientConnectionManager;
@@ -16,16 +15,12 @@ import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslBundles;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.web.reactive.function.client.ServletOAuth2AuthorizedClientExchangeFilterFunction;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.tcp.SslProvider;
@@ -33,29 +28,12 @@ import reactor.netty.tcp.SslProvider;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
-import java.util.Iterator;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @Configuration
 public class WebClientConfig {
 
-	@Bean("default-client-web-client")
-	public WebClient defaultClientWebClient(
-			OAuth2AuthorizedClientManager authorizedClientManager,
-			SslBundles sslBundles) throws Exception {
-
-		ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client =
-				new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
-		// @formatter:off
-		return WebClient.builder()
-				.clientConnector(createClientConnector(sslBundles.getBundle("demo-client")))
-				.apply(oauth2Client.oauth2Configuration())
-				.build();
-		// @formatter:on
-	}
-
-	private static ClientHttpConnector createClientConnector(SslBundle sslBundle) throws Exception {
+	public static ClientHttpConnector createClientConnector(SslBundle sslBundle) throws Exception {
 		KeyManagerFactory keyManagerFactory = sslBundle.getManagers().getKeyManagerFactory();
 		TrustManagerFactory trustManagerFactory = sslBundle.getManagers().getTrustManagerFactory();
 
@@ -72,6 +50,20 @@ public class WebClientConfig {
 		return new ReactorClientHttpConnector(httpClient);
 	}
 
+	@Bean("default-client-web-client")
+	public WebClient defaultClientWebClient(
+			OAuth2AuthorizedClientManager authorizedClientManager,
+			SslBundles sslBundles) throws Exception {
+
+		ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client =
+				new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
+		// @formatter:off
+		return WebClient.builder()
+				.clientConnector(createClientConnector(sslBundles.getBundle("demo-client")))
+				.apply(oauth2Client.oauth2Configuration())
+				.build();
+		// @formatter:on
+	}
 
 	@Bean("default-client-http-request-factory")
 	Supplier<ClientHttpRequestFactory> defaultClientHttpRequestFactory(SslBundles sslBundles) {

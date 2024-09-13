@@ -3,17 +3,19 @@ package org.example.secure.controllers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import org.example.secure.config.ClientBackendMappingProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
-import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -27,15 +29,22 @@ import static org.springframework.security.oauth2.client.web.reactive.function.c
 public class AuthorizationController {
 
 	private final WebClient defaultClientWebClient;
+	private final RestClient restClient;
 	private final String messagesBaseUri;
 	private final ObjectMapper objectMapper;
+	private final ClientBackendMappingProperties clientBackendMappingProperties;
 
+	@Autowired
 	public AuthorizationController(
 			@Qualifier("default-client-web-client") WebClient defaultClientWebClient,
-			@Value("${messages.base-uri}") String messagesBaseUri, ObjectMapper objectMapper) {
+			RestClient restClient,
+			@Value("${messages.base-uri}") String messagesBaseUri, ObjectMapper objectMapper,
+			ClientBackendMappingProperties clientBackendMappingProperties) {
 		this.defaultClientWebClient = defaultClientWebClient;
+		this.restClient = restClient;
 		this.messagesBaseUri = messagesBaseUri;
 		this.objectMapper = objectMapper;
+		this.clientBackendMappingProperties = clientBackendMappingProperties;
 	}
 
 	// '/authorized' is the registered 'redirect_uri' for authorization_code
@@ -67,6 +76,18 @@ public class AuthorizationController {
 		return objectMapper.writeValueAsString(messages);
 	}
 
+	@GetMapping(value = "/config")
+	public void checkConfig() {
+		System.out.println(clientBackendMappingProperties);
+	}
+
+	@GetMapping(value = "/authorize", params = {"grant_type=client_credentials", "client_auth=private_key_jwt", "client=restClient"})
+	public String clientCredentialsGrantUsingPrivateKeyJwtUsingRestClient() throws JsonProcessingException {
+
+		String[] messages = this.restClient.get().uri(this.messagesBaseUri).headers(httpHeaders -> httpHeaders.addAll(defaultHeaders())).retrieve().body(String[].class);
+		return objectMapper.writeValueAsString(messages);
+	}
+
 	@GetMapping(value = "/authorize", params = {"grant_type=client_credentials", "client_auth=mtls"})
 	public String clientCredentialsGrantUsingMutualTLS() throws JsonProcessingException {
 
@@ -78,7 +99,7 @@ public class AuthorizationController {
 				.bodyToMono(String[].class)
 				.block();
 
-		return objectMapper.writeValueAsString(messages) ;
+		return objectMapper.writeValueAsString(messages);
 	}
 
 
@@ -89,7 +110,7 @@ public class AuthorizationController {
 		HttpServletRequest request = requestAttributes.getRequest();
 
 		Iterator<String> requestHeaderName = request.getHeaderNames().asIterator();
-		while(requestHeaderName.hasNext()){
+		while (requestHeaderName.hasNext()) {
 			String headerName = requestHeaderName.next();
 			headers.add(headerName, request.getHeader(headerName));
 		}
